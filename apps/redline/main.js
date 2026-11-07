@@ -120,7 +120,6 @@ mgu.run({
             cv.blit(G.layer(key, W, H, (c) => drawBackground(c, t, sp), cv.textScale), 0, 0);
         }
         function drawBackground(cv, t, sp) {
-            cv.clear(t.bg);
             // angular frame lines (the G20's outline) around the centre
             const fl = withAlpha(t.tick, 0.55);
             cv.polyline([[24, 92], [330, 92], [370, 122], [1230, 122], [1270, 92], [1576, 92]], 2, fl);

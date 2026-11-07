@@ -1,5 +1,13 @@
 **English** | [中文 (Chinese translation)](README.zh-CN.md) | [Русский (Russian translation)](README.ru.md) | [한국어 수정본](README.ko.md)
 
+## HDP 定制版
+
+基于 [idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps) 的 iDrive 7 定制版。13 款仪表 App 使用黑绿渐变背景和 HDP Logo，车机端构建默认使用简体中文。
+
+在已联网的车机上打开 **MGU Store → Settings → Add source**，输入本 GitHub 仓库的地址并选择 **Branch → main**。添加后，从这个来源打开要安装的 App。Store 使用车机已有的 BMW SDK 构建。
+
+[查看 13 款 App 的离线预览](docs/screens/hdp-preview.png) · [MGU Store 使用说明](https://github.com/robertnisipeanu/mgu-store#sources)
+
 <h1 align="center">Idrive Custom Apps</h1>
 
 <p align="center">

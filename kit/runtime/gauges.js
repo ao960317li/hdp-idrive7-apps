@@ -36,6 +36,7 @@
  */
 const { mix, ramp, withAlpha } = require('./canvas');
 const { makeLayer, dropLayer } = require('./record');
+const Brand = require('./branding');
 const { getLanguage, t: localizeLabel } = require('./i18n');
 const upperText = (value) => localizeLabel(String(value)).toUpperCase();
 
@@ -681,8 +682,11 @@ function frame(cv, t, tabs, sel, badges) {
     const live = (badges || []).filter(Boolean);
     const labels = (tabs || []).map((n) => upperText(n));
     const badgesW = live.reduce((a, b) => a + Math.max(24 * 3.5, cv.textWidth(b.text, 18, opt) + 24) + 24 * 0.4, 0);
-    const widths = tabWidths(cv, labels, 20, opt, 150, 48, W - 32 - badgesW, 20);
-    let x = 16;
+    const logo = cv.blit && Brand.logo;
+    const logoSpace = logo ? logo.width + 12 : 0;
+    const widths = tabWidths(cv, labels, 20, opt, 150, 48, W - 32 - badgesW - logoSpace, logoSpace ? 8 : 20);
+    let x = 16 + logoSpace;
+    if (logo) logo.draw(cv, 16, (BAR_H - logo.height) / 2);
     cv.tabRects = [];
     labels.forEach((label, i) => {
         const tw = widths[i], on = i === sel;
@@ -760,10 +764,16 @@ function headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges) {
     const badgesW = bws.reduce((a, b) => a + b + bh * 0.4, 0);
     const tsize = 32, titleW = title ? cv.textWidth(title, tsize) : 0;
     const room = w - 20 - (badgesW ? badgesW + 12 : 0);
-    const tw = tabWidths(cv, names, 18, opt, 132, 44, room - 20, 20);
-    const tabsW = tw.reduce((a, b) => a + b, 0);
+    const titleSpace = title ? titleW + 32 : 0;
+    const sumWidths = (widths) => widths.reduce((a, b) => a + b, 0);
+    let tw = tabWidths(cv, names, 18, opt, 132, 44, room - 20, Brand.fullLogo ? 8 : 20);
+    if (Brand.fullLogo && title && 20 + titleSpace + sumWidths(tw) > room) {
+        const compactWidths = tabWidths(cv, names, 18, opt, 132, 44, room - 20 - titleSpace, 8);
+        if (20 + titleSpace + sumWidths(compactWidths) <= room) tw = compactWidths;
+    }
+    const tabsW = sumWidths(tw);
     // the tabs start 20 px in: the name shows only where every tab still fits after it (else the last tab, Settings, drops)
-    const showTitle = title && 20 + titleW + 32 + tabsW <= room;
+    const showTitle = title && 20 + titleSpace + tabsW <= room;
     // only as wide as the content: the rest of the strip stays the HMI's
     let end = x + 20 + (showTitle ? titleW + 32 : 0);
     names.forEach((n, i) => { if (end + tw[i] <= x + room) end += tw[i]; });

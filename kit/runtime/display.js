@@ -41,6 +41,7 @@ const { Recorder, play } = require('./record');
 const { Canvas } = require('./canvas');
 const { RenderClient } = require('./renderd');
 const G = require('./gauges');
+const Brand = require('./branding');
 const { drawCredit } = require('./credits');
 
 // FrontCCU deflection: short / long push per direction (DREHGEBER enums as numbers)
@@ -621,7 +622,11 @@ class Display {
         const scale = this.active() ? this.place.scale : 1;
         const key = w + 'x' + h + '@' + scale;
         let r = this.recorders.get(key);
-        if (!r) { r = new Recorder(w, h, { textScale: scale }); this.recorders.set(key, r); }
+        if (!r) {
+            const background = this.screen && this.screen.chrome !== false ? Brand.background(w, h) : null;
+            r = new Recorder(w, h, { textScale: scale, background });
+            this.recorders.set(key, r);
+        }
         r.reset();
         r.tabRects = null;
         // full-screen layout: G.frame hands its tabs to the header instead of drawing them
@@ -787,7 +792,14 @@ class Display {
         // compact header in the HMI strip's own black, only as wide as its name, tabs and badges:
         // right of it the HMI's strip shows through (radio station, phone signal, status icons)
         const hx = HMI.left - pl.x;
-        const end = G.header(c, Object.assign({}, t, { bg: HMI.headBg }), hx, 0, HMI.status.x - pl.x - hx, FULL.headH,
+        const logo = Brand.fullLogo;
+        const logoSpace = logo ? Math.ceil(logo.width * pl.scale) + 16 : 0;
+        if (logo) {
+            c.fillRect(hx, 0, logoSpace, FULL.headH, HMI.headBg);
+            c.fillRect(hx, FULL.headH - 2, logoSpace, 2, G.withAlpha('#ffffff', 0.22));
+            logo.draw(c, hx + 16, (FULL.headH - logo.height * pl.scale) / 2);
+        }
+        const end = G.header(c, Object.assign({}, t, { bg: HMI.headBg }), hx + logoSpace, 0, HMI.status.x - pl.x - hx - logoSpace, FULL.headH,
             this.screen.title || this.spec.title, tb.tabs, tb.sel, tb.badges, true, true);
         // the HMI's own title is in the strip under the header: a narrower header (a sheet: no tabs) stays
         // as wide as the app's widest, so none of that title shows beside it

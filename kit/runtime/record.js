@@ -81,6 +81,7 @@ class Recorder {
     constructor(w, h, opts) {
         this.w = w | 0; this.h = h | 0;
         this.textScale = (opts && opts.textScale) || 1;
+        this.background = opts && opts.background;
         this.buf = new ArrayBuffer(65536);
         this.f = new Float32Array(this.buf);
         this.u = new Uint32Array(this.buf);
@@ -125,7 +126,12 @@ class Recorder {
         this.images.add(id);
         this.n += 7; return this;
     }
-    clear(c) { this._grow(2); this.u[this.n++] = OP.CLEAR; this.u[this.n++] = pack(c || [0, 0, 0, 0]); return this; }
+    clear(c) {
+        const background = this.n === 0 && this.background;
+        this._grow(2); this.u[this.n++] = OP.CLEAR; this.u[this.n++] = pack(c || [0, 0, 0, 0]);
+        if (background) this.blit(background, 0, 0);
+        return this;
+    }
 
     fillRect(x, y, w, h, c) {
         if (!(w > 0 && h > 0)) return this;

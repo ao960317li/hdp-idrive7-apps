@@ -398,15 +398,17 @@ def build_start_widget(spec, app_id, icon_src, out, pkg_out=None):
     return {'component': comp, 'layout': ui['containers']['500']['components'][str(WIDGET_COMPONENT_ID)]['cells']['Widget']['value']}
 
 
-def build(app_id, language='en', preview_only=False):
+def build(app_id, language='en', preview_only=False, manifest_version=False):
     language = normalize_language(language)
     if not preview_only and not all(os.path.isfile(os.path.join(SDK, name)) for name in ('index.js', 'package.json')):
         raise SystemExit('BMW oap-sdk is missing. Extract it from your own head unit with kit/tools/extract_sdk.js, '
                          'or use --preview-only for an offline preview (no installable package).')
     adir = os.path.join(APPS, app_id)
     spec = json.load(open(os.path.join(adir, 'app.json'), encoding='utf-8'))
-    spec = localize_spec(spec, language)
+    spec = localize_spec(spec, language, manifest_version=manifest_version)
     spec.setdefault('id', app_id)
+    # MGU Store can install this app under a different ID when the original is already installed.
+    has_diagnostic_catalog = os.path.isfile(os.path.join(adir, 'dtc_db.pack')) or os.path.isdir(os.path.join(adir, 'dtc_db'))
     ver = spec['version']
     stage = os.path.join(DIST, app_id)
     # The source folder may use display casing; keep the installed identity stable.
@@ -462,7 +464,7 @@ def build(app_id, language='en', preview_only=False):
             shutil.copy(os.path.join(adir, f), os.path.join(src, 'javascript', f))
             print('  %s (committed)' % f)
     # kit runtime
-    if app_id == 'dtc_scanner' and language in ('zh-CN', 'ru'):
+    if has_diagnostic_catalog and language in ('zh-CN', 'ru'):
         module = 'build_diagnostic_zh' if language == 'zh-CN' else 'build_diagnostic_ru'
         catalog = __import__(module).catalog
         with tempfile.TemporaryDirectory(prefix='mgu-diagnostic-') as temporary:
@@ -494,7 +496,7 @@ def build(app_id, language='en', preview_only=False):
                         os.path.join(src, 'javascript', 'kit', 'fonts', name))
     if language == 'zh-CN':
         # Diagnostic glyphs are Chinese-only; keep the English runtime atlas intact.
-        if app_id == 'dtc_scanner':
+        if has_diagnostic_catalog:
             shutil.copy(os.path.join(KIT, 'localization', 'fonts', 'diagnostic-zh-CN.json'),
                         os.path.join(src, 'javascript', 'kit', 'fonts', 'cjk.json'))
     if credit(language):
@@ -608,11 +610,12 @@ def main():
     parser.add_argument('--language', type=normalize_language, choices=languages(), default='en',
                         help='UI language; Korean also accepts ko-KR, ko-kr and ko_KR')
     parser.add_argument('--preview-only', action='store_true', help='stage an offline preview without BMW SDK or installable archives')
+    parser.add_argument('--manifest-version', action='store_true', help='use the version from app.json for MGU Store source builds')
     parser.add_argument('apps', nargs='*')
     args = parser.parse_args()
     ids = args.apps or sorted(d for d in os.listdir(APPS) if os.path.exists(os.path.join(APPS, d, 'app.json')))
     for i in ids:
-        build(i, args.language, preview_only=args.preview_only)
+        build(i, args.language, preview_only=args.preview_only, manifest_version=args.manifest_version)
 
 
 if __name__ == '__main__':
