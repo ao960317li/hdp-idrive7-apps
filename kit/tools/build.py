@@ -398,13 +398,20 @@ def build_start_widget(spec, app_id, icon_src, out, pkg_out=None):
     return {'component': comp, 'layout': ui['containers']['500']['components'][str(WIDGET_COMPONENT_ID)]['cells']['Widget']['value']}
 
 
-def build(app_id, language='en', preview_only=False, manifest_version=False):
+def build(app_id, language='en', preview_only=False, manifest_version=False, software_renderer_default=False):
     language = normalize_language(language)
     if not preview_only and not all(os.path.isfile(os.path.join(SDK, name)) for name in ('index.js', 'package.json')):
         raise SystemExit('BMW oap-sdk is missing. Extract it from your own head unit with kit/tools/extract_sdk.js, '
                          'or use --preview-only for an offline preview (no installable package).')
     adir = os.path.join(APPS, app_id)
     spec = json.load(open(os.path.join(adir, 'app.json'), encoding='utf-8'))
+    if software_renderer_default:
+        renderer = next((setting for setting in spec.get('settings', []) if setting['key'] == 'renderer'), None)
+        if renderer:
+            renderer.update(default='software', reset=1)
+            for option in renderer['options']:
+                if option[1] == 'GPU 60 fps (default)':
+                    option[1] = 'GPU 60 fps'
     spec = localize_spec(spec, language, manifest_version=manifest_version)
     spec.setdefault('id', app_id)
     # MGU Store can install this app under a different ID when the original is already installed.
@@ -611,11 +618,14 @@ def main():
                         help='UI language; Korean also accepts ko-KR, ko-kr and ko_KR')
     parser.add_argument('--preview-only', action='store_true', help='stage an offline preview without BMW SDK or installable archives')
     parser.add_argument('--manifest-version', action='store_true', help='use the version from app.json for MGU Store source builds')
+    parser.add_argument('--software-renderer-default', action='store_true',
+                        help='start in software mode and migrate existing renderer settings once')
     parser.add_argument('apps', nargs='*')
     args = parser.parse_args()
     ids = args.apps or sorted(d for d in os.listdir(APPS) if os.path.exists(os.path.join(APPS, d, 'app.json')))
     for i in ids:
-        build(i, args.language, preview_only=args.preview_only, manifest_version=args.manifest_version)
+        build(i, args.language, preview_only=args.preview_only, manifest_version=args.manifest_version,
+              software_renderer_default=args.software_renderer_default)
 
 
 if __name__ == '__main__':

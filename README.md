@@ -6,6 +6,8 @@
 
 在已联网的车机上打开 **MGU Store → Settings → Add source**，输入本 GitHub 仓库的地址并选择 **Branch → main**。添加后，从这个来源打开要安装的 App。Store 使用车机已有的 BMW SDK 构建。
 
+为排查车机文字空白，当前 Store 版默认使用软件渲染。更新后首次启动会将已有的渲染器设置切换一次。仪表恢复显示后，可以在应用设置里重新选择 GPU 渲染。
+
 [查看 13 款 App 的离线预览](docs/screens/hdp-preview.png) · [MGU Store 使用说明](https://github.com/robertnisipeanu/mgu-store#sources)
 
 <h1 align="center">Idrive Custom Apps</h1>

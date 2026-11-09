@@ -9,7 +9,7 @@
     "requires": { "idrive7-renderd": "2.1.7", "mgu-inputgate": "1.0.0" },
     "build": {
       "python": "kit/tools/build.py",
-      "args": ["--language", "zh-CN", "--manifest-version", "{id}"],
+      "args": ["--language", "zh-CN", "--manifest-version", "--software-renderer-default", "{id}"],
       "sdk": "oap-sdk",
       "output": "dist/{id}@{version}.tgz",
       "shared": ["kit/runtime", "kit/platform", "kit/localization", "kit/tools/build.py", "kit/tools/pack_data.py",
