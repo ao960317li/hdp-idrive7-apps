@@ -529,7 +529,8 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
     rt_spec['stateIds'] = state_ids
     json.dump(rt_spec, open(os.path.join(src, 'javascript', 'kit', 'app-spec.json'), 'w', encoding='utf-8', newline='\n'), indent=1)
     locale = {'language': language, 'strings': load_locale(language)}
-    if credit(language):
+    # HDP leaves the translation credit in Settings and in the entry source.
+    if credit(language) and not os.path.isfile(os.path.join(kr, 'branding-assets.json')):
         locale['credit'] = credit(language)['corner']
     json.dump(locale, open(os.path.join(src, 'javascript', 'kit', 'locale.json'), 'w', encoding='utf-8', newline='\n'), ensure_ascii=False)
     if preview_only:

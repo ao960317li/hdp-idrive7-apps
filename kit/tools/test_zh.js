@@ -10,7 +10,8 @@ const {Canvas}=require(path.join(kit,'canvas'));
 const {Recorder,atlasId}=require(path.join(kit,'record'));
 const {CREDIT,drawCredit}=require(path.join(kit,'credits'));
 const creditFile=path.resolve(__dirname,'../localization/credit.'+language+'.json');
-const creditData=language!=='en'&&fs.existsSync(creditFile)?JSON.parse(fs.readFileSync(creditFile,'utf8')):null,credited=!!creditData;
+const branded=fs.existsSync(path.join(kit,'branding-assets.json'));
+const creditData=language!=='en'&&fs.existsSync(creditFile)?JSON.parse(fs.readFileSync(creditFile,'utf8')):null,credited=!!creditData&&!branded;
 const fonts=require(path.join(kit,'fonts'));
 const {statusInfo,NRC}=require(path.join(kit,'diag'));
 const {fitText}=require(path.join(kit,'text-layout'));
@@ -117,10 +118,10 @@ async function main(){
  assert.strictEqual(cv.textWidth('Oil',32,opts),r.textWidth('Oil',32,opts));
  const credit=new Canvas(600,40);drawCredit(credit,580,25);let alpha=0;
  for(let i=3;i<credit.d.length;i+=4)alpha=Math.max(alpha,credit.d[i]);
- assert(credited?alpha>0&&alpha<=64:alpha===0,'credit visibility follows the installed language');
+ assert(credited?alpha>0&&alpha<=64:alpha===0,'dashboard credit follows the language and branding');
  let height=0;for(const name of fs.readdirSync(path.join(kit,'fonts')).filter(x=>x.endsWith('.json'))){
   const file=JSON.parse(fs.readFileSync(path.join(kit,'fonts',name),'utf8'));for(const s of file.sizes){assert(s.atlasW<=1024&&s.atlasH<=4096);height+=s.atlasH+1}
  }assert(height<8192,'GPU atlas budget');
- console.log('PASS: fixed '+language+' package, no runtime switching, native strings, glyphs, renderer metrics and translation credit only where the language has one');
+ console.log('PASS: fixed '+language+' package, no runtime switching, native strings, glyphs, renderer metrics and dashboard credit');
 }
 main().catch(e=>{console.error(e);process.exit(1)});
