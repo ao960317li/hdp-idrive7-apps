@@ -78,6 +78,7 @@ const LAYOUTS = ['full', 'standard'];
 
 // the HMI's page animation when a screen opens (the picture shows after it)
 const SHOW_DELAY_MS = 350;
+const GPU_TEST_MS = 15000;
 
 class Display {
     constructor(ui, log, spec, settings, themeFn) {
@@ -102,6 +103,7 @@ class Display {
         const canvasScreens = (spec.screens || []).filter((s) => s.kind === 'canvas');
         this.screen = canvasScreens[0] || null;
         if (!this.screen) return;
+        if (settings.get('renderer') === 'gpu_test') settings.set('renderer', 'software');
         this.ui.onVisible((name, v) => {
             if (name === 'SETTINGS') { this._syncVisible(); if (!v) this._lost(); return; }
             if (name !== this.screen.name) return;
@@ -114,7 +116,12 @@ class Display {
             if (k === 'layout' || k === 'renderer') this.closeSheet();
             if (k === 'layout') { this._place(); this.lastWords = null; }
             if (k === 'theme') this.bgShown = null;
-            if (k === 'renderer') this._mode();
+            if (k === 'renderer') {
+                clearTimeout(this.gpuTestTimer);
+                this.gpuTestTimer = null;
+                this._mode();
+                this._startGpuTest();
+            }
         });
         this._mode();
         // slim bar: light the button the controller is on (HMI focus events) and flash on press
@@ -591,6 +598,7 @@ class Display {
     }
 
     _syncVisible() {
+        this._startGpuTest();
         if (!this.gpu) return;
         const on = this._shown();
         if (!on && this.showTimer) { clearTimeout(this.showTimer); this.showTimer = null; }
@@ -610,6 +618,12 @@ class Display {
         }
         this.gpu.show(on);
         if (on) this.lastWords = null;
+    }
+
+    /** Give the user a way back when the GPU screen has no readable controls. */
+    _startGpuTest() {
+        if (this.settings.get('renderer') !== 'gpu_test' || this.gpuTestTimer || !this._shown()) return;
+        this.gpuTestTimer = setTimeout(() => this.settings.set('renderer', 'software'), GPU_TEST_MS);
     }
 
     /** GPU path usable for this screen right now? */

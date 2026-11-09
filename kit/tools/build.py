@@ -412,6 +412,7 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
             for option in renderer['options']:
                 if option[1] == 'GPU 60 fps (default)':
                     option[1] = 'GPU 60 fps'
+            renderer['options'].append(['gpu_test', 'GPU full-screen test (15 s)'])
     spec = localize_spec(spec, language, manifest_version=manifest_version)
     spec.setdefault('id', app_id)
     # MGU Store can install this app under a different ID when the original is already installed.
@@ -444,6 +445,10 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
             'userLoginRequired': False, 'backgroundPriority': 200, 'someipManifest': 'manifest.json',
         },
     }
+    # app.json "autostart": the platform starts the app by itself (the Store's deploy tool lists it so); its
+    # impl.background runs then, without screens
+    if spec.get('autostart'):
+        pkg['mguAppStartType'] = 'autostart'
     json.dump(pkg, open(os.path.join(src, 'package.json'), 'w', encoding='utf-8', newline='\n'), indent=2)
     json.dump(manifest, open(os.path.join(src, 'manifest.json'), 'w', encoding='utf-8', newline='\n'), indent=2)
     shutil.copy(os.path.join(KIT, 'platform', 'permissions.json'), os.path.join(src, 'permissions.json'))
@@ -486,6 +491,12 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
             shutil.copytree(p, os.path.join(src, 'javascript', 'kit', f))
         else:
             shutil.copy(p, os.path.join(src, 'javascript', 'kit', f))
+    if not os.path.isfile(os.path.join(adir, 'hud-m.js')):
+        # Barlow is only the gear on Redline's HUD layouts: other apps don't carry its atlas
+        for name in ('gear_barlow.json', 'OFL-Barlow.txt'):
+            p = os.path.join(src, 'javascript', 'kit', 'fonts', name)
+            if os.path.exists(p):
+                os.remove(p)
     if language != 'ru':
         for name in ('ru.json', 'ru.tsv'):
             p = os.path.join(src, 'javascript', 'kit', 'locales', name)

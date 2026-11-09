@@ -71,6 +71,7 @@ miles	英里
 1/8 mile	1/8 英里
 Renderer	渲染器
 GPU 60 fps (default)	GPU 60 帧（默认）
+GPU full-screen test (15 s)	GPU 全屏测试（15 秒）
 Software	软件渲染
 Screen layout	屏幕布局
 Full screen	全屏
@@ -1659,3 +1660,19 @@ Comfort Individual	舒适个性化
 Eco Pro	节能
 Eco Pro+	节能+
 Eco Pro Individual	节能个性化
+ENGINE	发动机
+VOLTAGE FROM	电压来源
+running	运行中
+Ambient config	氛围灯设置
+Colour by driving mode	按驾驶模式设颜色
+Leave as is	保持不变
+Leave as is gives my own colour back	保持不变时恢复我的颜色
+By driving mode	按驾驶模式
+Following driving mode	跟随驾驶模式
+Not following	不跟随
+Car type	车辆类型
+Petrol or diesel	汽油或柴油
+Hybrid Eco Pro	混合动力节能
+Hybrid	混合动力
+Electric	纯电
+Give the HUD back to Cluster functions at switch-off	熄火后把 HUD 交还给 Cluster functions
