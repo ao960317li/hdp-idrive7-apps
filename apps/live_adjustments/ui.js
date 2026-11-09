@@ -118,11 +118,11 @@ function noteLine(cv, G, t, m, bottom) {
 }
 
 /** A row of equal buttons centred across the page bottom; spec = [label, run, selected]. */
-function buttonRow(cv, G, t, specs, bottom, bw, busy, keyPrefix) {
+function buttonRow(cv, G, t, specs, bottom, bw, busy, keyPrefix, fill) {
     const bh = 56, gap = 26, by = bottom - 56;
     let bx = (W - (specs.length * bw + (specs.length - 1) * gap)) / 2;
     specs.forEach(([label, run, on], i) => {
-        const opts = { key: keyPrefix + i, busy: !!busy };
+        const opts = { key: keyPrefix + i, busy: !!busy, fill };
         if (on) Object.assign(opts, { color: RED(t), primary: true });
         G.button(cv, t, bx, by, bw, bh, label, run || (() => {}), opts);
         bx += bw + gap;
@@ -147,7 +147,7 @@ function drawMap(cv, G, t, m, act, bottom) {
     }
     noteLine(cv, G, t, m, bottom);
     buttonRow(cv, G, t, [1, 2, 3, 4].map((n) => ['Map ' + n, act.map && act.map(n), m.map === n]),
-        bottom, 200, m.busy, 'la_map');
+        bottom, 200, m.busy, 'la_map', m.busy ? t.track : t.tick);
     return cv;
 }
 

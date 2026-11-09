@@ -853,7 +853,7 @@ function button(cv, t, x, y, w, h, label, run, opts) {
     }
     const S = t.sel || t.accent, c = o.color || S;
     if (!w) w = Math.max(h * 3, cv.textWidth(String(label).toUpperCase(), h * 0.4, { font: 'bold', spacing: 1.5 }) + h * 1.2);
-    cv.roundRect(x, y, w, h, h / 2, o.primary ? withAlpha(c, o.busy ? 0.35 : 0.85) : withAlpha('#ffffff', 0.07));
+    cv.roundRect(x, y, w, h, h / 2, o.primary ? withAlpha(c, o.busy ? 0.35 : 0.85) : o.fill || withAlpha('#ffffff', 0.07));
     if (!o.primary) cv.strokeRoundRect(x, y, w, h, h / 2, 1.5, withAlpha(o.color || '#ffffff', o.busy ? 0.25 : o.color ? 0.75 : 0.3));
     cv.text(String(label).toUpperCase(), x + w / 2, y + h / 2 + h * 0.15, h * 0.4, o.primary ? '#ffffff' : o.busy ? t.dim : o.color || t.text,
         { align: 'center', font: 'bold', spacing: 1.5 });
