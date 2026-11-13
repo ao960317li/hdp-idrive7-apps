@@ -2,10 +2,12 @@
   "id": "draggy",
   "title": "Drag Timer",
   "description": "0-100, 100-200 and 1/4 mile timer with best times",
-  "version": "2.5.25",
+  "version": "2.5.26",
   "vendor": "custom",
   "loggingId": "OA94",
   "iconGlyph": "flag",
+  "mguHmi": ["ID7"],
+  "requires": { "idrive7-renderd": "2.1.7", "mgu-inputgate": "1.0.0" },
   "signals": {
     "de.bmw.infotainment.vehicle.Vehicle2": {
       "statusCarSpeed2": "rs"

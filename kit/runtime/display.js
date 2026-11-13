@@ -80,6 +80,7 @@ const HMI8 = Object.assign({}, HMI7, {
 /* the geometry for the screen the renderer reports; the current one in HMI (set by Display._place) */
 const geometryFor = (scr) => (scr && scr.w === HMI8.screen.w && scr.h === HMI8.screen.h ? HMI8 : HMI7);
 let HMI = HMI7;
+const surfaceLeft = (place) => HMI.area ? 0 : HMI.left - place.x;
 /* full-screen layout, in the surface's pixels (it covers the whole screen) */
 const FULL = {
     headH: 80,                                  // header in the HMI's title strip
@@ -89,6 +90,7 @@ const FULL = {
     src: { x: 12, y: 38, w: 1576, h: 482 },
 };
 const LAYOUTS = ['full', 'standard'];
+const CTL_RETRIES = 3, CTL_RETRY_MS = 30000;   // connecting again for the controller (_ctlRetry)
 
 // the HMI's page animation when a screen opens (the picture shows after it)
 const SHOW_DELAY_MS = 350;
@@ -195,6 +197,7 @@ class Display {
             if (this.gpu !== gpu) return;
             clearTimeout(this.frontTimer);
             if (st.front) {
+                this._ctlRetry(gpu);
                 if (this.blocked) { this.blocked = false; this.log.info('display: renderer has the app in front again'); this.lastWords = null; this._syncVisible(); this._grab(); this._hmiBar(); }
                 return;
             }
@@ -214,6 +217,22 @@ class Display {
         G.onLayerDrop((id) => { if (this.gpu) this.gpu.dropLayer(id); });
         gpu.connect();
         if (this.grabbing) gpu.grab(true);
+    }
+
+    /**
+     * In front without the controller: the renderer offers it only if no other renderer held it when this app
+     * connected (the Store's open while this app restarts after its update: seen on the car, the controller then
+     * never reached the app). Connected again, at most CTL_RETRIES times, CTL_RETRY_MS apart, so it asks again;
+     * a head unit whose HMI has no controller gate stays without after those. Never on iDrive 8: the Store's
+     * renderer there has no controller to offer (the gate is iDrive 7's HMI only), so every connection would go
+     * again, the picture gone for a moment and every resource uploaded again each time.
+     */
+    _ctlRetry(gpu) {
+        const now = Date.now();
+        if (geometryFor(gpu.screen) !== HMI7) return;
+        if (!gpu.native || !gpu.info || gpu.info.controller || !this.ownable() || (this.ctlTries || 0) >= CTL_RETRIES || now - (this.ctlTryT || 0) < CTL_RETRY_MS) return;
+        this.ctlTries = (this.ctlTries || 0) + 1; this.ctlTryT = now;
+        if (gpu.reconnect()) this.log.info('display: in front without the controller, connecting to the renderer again (' + this.ctlTries + '/' + CTL_RETRIES + ')');
     }
 
     /** the iDrive controller to this app alone while on (GPU renderer + mgu-inputgate.so needed) */
@@ -398,7 +417,7 @@ class Display {
         if (p.tab != null) return ((this.chromeRec && this.chromeRec.tabRects) || []).find((q) => q.i === p.tab) || null;
         if (p.tgt) return { x: p.tgt.x * k + pl.ox, y: p.tgt.y * k + pl.oy, w: p.tgt.w * k, h: p.tgt.h * k };
         if (p.bar) { const b = this.buttons().find((q) => q.id === p.bar); return b ? { x: b.x - this.barOff - pl.x, y: pl.h - this.barH(), w: b.w, h: this.barH() } : null; }
-        if (p.scroll) { const hx = HMI.left - pl.x; return { x: hx, y: this.headH(), w: pl.w - hx, h: pl.h - this.barH() - this.headH() }; }
+        if (p.scroll) { const hx = surfaceLeft(pl); return { x: hx, y: this.headH(), w: pl.w - hx, h: pl.h - this.barH() - this.headH() }; }
         return null;
     }
     /**
@@ -497,7 +516,7 @@ class Display {
         const pl = this.place;
         const logical = (q) => (r ? q : { i: q.i, x: (q.x - pl.ox) / pl.scale, y: (q.y - pl.oy) / pl.scale, w: q.w / pl.scale, h: q.h / pl.scale });
         this.tabs = (rects || []).map(logical);
-        const W = pl.w, hx = HMI.left - pl.x, by = pl.h - this.barH();
+        const W = pl.w, hx = surfaceLeft(pl), by = pl.h - this.barH();
         // the header as far as the HMI's status corner shows through it (iDrive 7); iDrive 8 has none in the
         // app's area: the whole row is the app's, as a tap there must not count as the HMI's (mgu-render closes)
         const he = HMI.status.h ? this.headEnd : W;
@@ -832,7 +851,7 @@ class Display {
         const tb = this.own() ? this._tabList() : r.chrome.tabs || { tabs: [], sel: -1, badges: [] };
         // compact header in the HMI strip's own black, only as wide as its name, tabs and badges:
         // right of it the HMI's strip shows through (radio station, phone signal, status icons)
-        const hx = HMI.left - pl.x;
+        const hx = surfaceLeft(pl), headerRight = HMI.area ? W : HMI.status.x - pl.x;
         const logo = Brand.fullLogo;
         const logoSpace = logo ? Math.ceil(logo.width * pl.scale) + 16 : 0;
         if (logo) {
@@ -840,12 +859,12 @@ class Display {
             c.fillRect(hx, FULL.headH - 2, logoSpace, 2, G.withAlpha('#ffffff', 0.22));
             logo.draw(c, hx + 16, (FULL.headH - logo.height * pl.scale) / 2);
         }
-        const end = G.header(c, Object.assign({}, t, { bg: HMI.headBg }), hx + logoSpace, 0, HMI.status.x - pl.x - hx - logoSpace, FULL.headH,
+        const end = G.header(c, Object.assign({}, t, { bg: HMI.headBg }), hx + logoSpace, 0, headerRight - hx - logoSpace, FULL.headH,
             this.screen.title || this.spec.title, tb.tabs, tb.sel, tb.badges, true, true);
         // the HMI's own title is in the strip under the header: a narrower header (a sheet: no tabs) stays
         // as wide as the app's widest, so none of that title shows beside it
         if (!this.sheet) this.headMax = Math.max(this.headMax || 0, end);
-        const sx = this.headEnd = Math.min(HMI.status.x - pl.x, Math.ceil(Math.max(end, this.headMax || 0)));
+        const sx = this.headEnd = Math.min(headerRight, Math.ceil(Math.max(end, this.headMax || 0)));
         if (sx > end) { c.fillRect(end, 0, sx - end, FULL.headH - 2, HMI.headBg); c.fillRect(end, FULL.headH - 2, sx - end, 2, G.withAlpha('#ffffff', 0.22)); }
         // the tab the controller is on (the kit holds it: Display._ccu)
         const ft = this.focusTab != null && (!this.sheet || this.sheetHead) && (c.tabRects || []).find((q) => q.i === this.focusTab);
@@ -872,7 +891,7 @@ class Display {
         // the HMI's status icons and its back arrow column (home button, back arrow) show through;
         // the column under them is covered, so the HMI's own bar doesn't show at the bottom left, nor the
         // mark the HMI draws above it when its bar is wider than the screen (eDrive's "Reset drive totals")
-        c.clip(sx, 0, W - sx, HMI.status.h).clear(0).noclip();
+        if (HMI.status.h) c.clip(sx, 0, W - sx, HMI.status.h).clear(0).noclip();
         if (hx > 0) c.clip(0, 0, hx, HMI.colEnd - pl.y).clear(0).noclip();
         drawCredit(c, W - 18, FULL.headH + 17);
         r.xf(1, 0, 0).append(c).xf();
