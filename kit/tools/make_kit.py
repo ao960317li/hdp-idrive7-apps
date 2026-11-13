@@ -156,10 +156,9 @@ def md5(p):
 
 def main():
     import argparse
-    from localize import languages, package_version, normalize_language
+    from localize import languages, package_version
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--language', type=normalize_language, choices=languages(), default='en',
-                        help='UI language; Korean also accepts ko-KR, ko-kr and ko_KR')
+    parser.add_argument('--language', choices=languages(), default='en', help='UI language')
     parser.add_argument('apps', nargs='*')
     args = parser.parse_args()
     # English (the default) keeps the usual dist/mgu-custom-apps(.tar.gz); other languages get a suffix

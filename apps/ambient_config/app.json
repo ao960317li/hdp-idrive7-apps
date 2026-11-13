@@ -2,12 +2,12 @@
   "id": "ambient_config",
   "title": "Ambient config",
   "description": "Any colour on the ambient light, animations, and a look for each driving mode",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "vendor": "custom",
   "loggingId": "OAA4",
   "iconGlyph": "ambient",
-  "mguHmi": ["ID7"],
-  "requires": { "idrive7-renderd": "2.1.7", "mgu-inputgate": "1.0.0" },
+  "mguHmi": ["ID7", "ID8"],
+  "requires": { "idrive7-renderd": "2.1.18", "mgu-inputgate": "1.1.0" },
   "autostart": true,
   "signals": {
     "de.bmw.infotainment.misc.ComfortFunctionIuK": {

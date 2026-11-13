@@ -330,7 +330,6 @@ too; the tool lists anything missing.
 ```sh
 python3 kit/tools/build.py            # all apps, English -> dist/<id>@<ver>.mgu
 python3 kit/tools/build.py redline    # just one app, English
-python3 kit/tools/build.py --language ko       # Korean -> dist/<id>@<ver>-ko.1.mgu
 python3 kit/tools/build.py --language ru       # Russian -> dist/<id>@<ver>-ru.<revision>.mgu
 python3 kit/tools/build.py --language zh-CN    # Simplified Chinese -> dist/<id>@<ver>-zh.cn.2.mgu
 node kit/tools/preview.js dist/redline preview wait=10   # English PC preview -> preview/*.png

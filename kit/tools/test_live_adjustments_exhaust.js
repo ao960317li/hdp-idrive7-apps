@@ -325,7 +325,6 @@ async function pictureTests() {
 /* --------------------------------------------------------------------------------------- languages -- */
 
 const ATLAS = {
-    ko: 'kit/localization/fonts/korean.json',
     'zh-CN': 'kit/runtime/fonts/cjk.json',
     ru: 'kit/localization/fonts/cyrillic-ru.json',
 };

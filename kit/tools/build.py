@@ -17,7 +17,7 @@ import gzip, json, os, re, shutil, sys, tarfile, tempfile, uuid
 from xml.sax.saxutils import escape
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pack_data  # noqa: E402
-from localize import unicode_resources, localize_spec, load_locale, languages, credit, credit_name, normalize_language
+from localize import unicode_resources, localize_spec, load_locale, languages, credit, credit_name
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
@@ -569,7 +569,6 @@ def build_start_widget(spec, app_id, icon_src, out, pkg_out=None):
 
 
 def build(app_id, language='en', preview_only=False, manifest_version=False, software_renderer_default=False):
-    language = normalize_language(language)
     if not preview_only and not all(os.path.isfile(os.path.join(SDK, name)) for name in ('index.js', 'package.json')):
         raise SystemExit('BMW oap-sdk is missing. Extract it from your own head unit with kit/tools/extract_sdk.js, '
                          'or use --preview-only for an offline preview (no installable package).')
@@ -668,7 +667,8 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
     for f in os.listdir(kr):
         p = os.path.join(kr, f)
         if os.path.isdir(p):
-            shutil.copytree(p, os.path.join(src, 'javascript', 'kit', f))
+            ignore = shutil.ignore_patterns('ko.json', 'ko.tsv') if f == 'locales' else None
+            shutil.copytree(p, os.path.join(src, 'javascript', 'kit', f), ignore=ignore)
         else:
             shutil.copy(p, os.path.join(src, 'javascript', 'kit', f))
     if missing:
@@ -688,13 +688,6 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
     if language == 'ru':
         shutil.copy(os.path.join(KIT, 'localization', 'fonts', 'cyrillic-ru.json'),
                     os.path.join(src, 'javascript', 'kit', 'fonts', 'cyrillic.json'))
-    if language == 'ko':
-        # Korean and Chinese are separate fixed-language packages. Loading both large
-        # atlases could fragment the renderer's two 1024x4096 glyph shelves.
-        os.remove(os.path.join(src, 'javascript', 'kit', 'fonts', 'cjk.json'))
-        for name in ('korean.json', 'OFL-NotoSansKR.txt'):
-            shutil.copy(os.path.join(KIT, 'localization', 'fonts', name),
-                        os.path.join(src, 'javascript', 'kit', 'fonts', name))
     if language == 'zh-CN':
         # Diagnostic glyphs are Chinese-only; keep the English runtime atlas intact.
         if has_diagnostic_catalog:
@@ -812,8 +805,7 @@ def gz_header_free(path):
 def main():
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--language', type=normalize_language, choices=languages(), default='en',
-                        help='UI language; Korean also accepts ko-KR, ko-kr and ko_KR')
+    parser.add_argument('--language', choices=languages(), default='en', help='UI language')
     parser.add_argument('--preview-only', action='store_true', help='stage an offline preview without BMW SDK or installable archives')
     parser.add_argument('--manifest-version', action='store_true', help='use the version from app.json for MGU Store source builds')
     parser.add_argument('--software-renderer-default', action='store_true',
