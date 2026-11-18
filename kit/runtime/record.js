@@ -258,25 +258,34 @@ class Recorder {
         const sc = size / f.size, sp = opts.spacing || 0;
         const w = fonts.measure(f, s) * sc + sp * Math.max(0, s.length - 1);
         let pen = opts.align === 'center' ? x - w / 2 : opts.align === 'right' ? x - w : x;
-        let cnt = 0;
-        const head = this.n;
-        this._grow(4 + s.length * 8);
+        let cnt = 0, head = -1, page = null;
+        // In the worst case each glyph starts a run on a different atlas page.
+        this._grow(s.length * 12);
         const fl = this.f, u = this.u;
-        let i = head + 4;
+        let i = this.n;
         for (const ch of s) {
             const g = f.glyphs[ch.codePointAt(0)] || f.glyphs[63];
             if (!g) continue;
             const gx = g[0], gy = g[1], gw = g[2], gh = g[3];
             if (gw && gh) {
+                const nextPage = fonts.gpuPage(f, g);
+                if (nextPage !== page) {
+                    if (head >= 0) u[head + 3] = cnt;
+                    page = nextPage;
+                    const aid = atlasId(page, page.family || family);
+                    this.atlases.add(aid);
+                    head = i; cnt = 0;
+                    u[i++] = OP.GLYPHS; u[i++] = aid; u[i++] = pack(c); u[i++] = 0;
+                }
+                const py = gy - (page.sourceY || 0);
                 fl[i++] = pen + g[4] * sc; fl[i++] = y + g[5] * sc; fl[i++] = gw * sc; fl[i++] = gh * sc;
-                fl[i++] = gx; fl[i++] = gy; fl[i++] = gx + gw; fl[i++] = gy + gh;
+                fl[i++] = gx; fl[i++] = py; fl[i++] = gx + gw; fl[i++] = py + gh;
                 cnt++;
             }
             pen += g[6] * sc + sp;
         }
-        if (cnt) {
-            const aid = atlasId(f, f.family || family); this.atlases.add(aid);
-            u[head] = OP.GLYPHS; u[head + 1] = aid; u[head + 2] = pack(c); u[head + 3] = cnt;
+        if (head >= 0) {
+            u[head + 3] = cnt;
             this.n = i;
         }
         return w;

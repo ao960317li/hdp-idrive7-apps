@@ -698,8 +698,12 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
     if language == 'zh-CN':
         # Diagnostic glyphs are Chinese-only; keep the English runtime atlas intact.
         if has_diagnostic_catalog:
-            shutil.copy(os.path.join(KIT, 'localization', 'fonts', 'diagnostic-zh-CN.json'),
-                        os.path.join(src, 'javascript', 'kit', 'fonts', 'cjk.json'))
+            with open(os.path.join(KIT, 'localization', 'fonts', 'diagnostic-zh-CN.json'), encoding='utf-8') as file:
+                diagnostic_font = json.load(file)
+            # Small GPU uploads fit between atlases retained from other apps.
+            diagnostic_font['gpuPageHeight'] = 512
+            with open(os.path.join(src, 'javascript', 'kit', 'fonts', 'cjk.json'), 'w', encoding='utf-8', newline='\n') as file:
+                json.dump(diagnostic_font, file, ensure_ascii=False, separators=(',', ':'))
     if credit(language):
         # The translation credit in the installed entry code, as plain comments.
         entry = os.path.join(src, 'javascript', 'app.js')

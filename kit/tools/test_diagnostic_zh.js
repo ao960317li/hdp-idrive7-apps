@@ -4,7 +4,7 @@ const stage = path.resolve(process.argv[2] || 'dist/dtc_scanner/source/javascrip
 const { diagnosticText } = require(path.join(stage, 'diagnostic-text'));
 const { fitText } = require(path.join(stage, 'kit/text-layout'));
 const { Canvas } = require(path.join(stage, 'kit/canvas'));
-const { Recorder } = require(path.join(stage, 'kit/record'));
+const { Recorder, play, atlasById } = require(path.join(stage, 'kit/record'));
 const fonts = require(path.join(stage, 'kit/fonts'));
 const i18n = require(path.join(stage, 'kit/i18n'));
 const language = i18n.getLanguage();
@@ -72,6 +72,50 @@ assert(atlas.atlasH<=2048);
 for(const text of Object.values(translations)) for(const ch of text) {
     if(/[\u3000-\u9fff\uff00-\uffef]/.test(ch)) assert(atlas.glyphs[ch.codePointAt(0)],'Missing glyph '+ch);
 }
+// A renderer used by other apps can have enough total space but no shelf tall
+// enough for the complete diagnostic atlas. Its GPU pages must fit those gaps.
+const diagnosticFont = fonts.get('label', 32, '故障检测');
+assert.strictEqual(diagnosticFont.gpuPageHeight, 512);
+const pageSamples = new Map();
+for (const [code, glyph] of Object.entries(diagnosticFont.glyphs)) {
+    if (!glyph[2] || !glyph[3]) continue;
+    const page = fonts.gpuPage(diagnosticFont, glyph);
+    assert(page && page.atlasH <= 512, 'A whole diagnostic glyph must fit its GPU page');
+    assert(glyph[1] >= page.sourceY && glyph[1] + glyph[3] <= page.sourceY + page.atlasH);
+    assert(page.alpha.equals(diagnosticFont.alpha.slice(
+        page.sourceY * page.atlasW, (page.sourceY + page.atlasH) * page.atlasW)));
+    if (!pageSamples.has(page)) pageSamples.set(page, String.fromCodePoint(Number(code)));
+}
+const shelves = [2919, 3106]; // Captured after opening thirteen previously shipped apps.
+assert(Math.min(...shelves) + diagnosticFont.atlasH > 4096, 'The old one-piece upload must reproduce the failure');
+for (const page of pageSamples.keys()) {
+    const column = shelves[0] <= shelves[1] ? 0 : 1;
+    assert(shelves[column] + page.atlasH <= 4096, 'Every diagnostic page must fit the retained GPU atlas');
+    shelves[column] += page.atlasH + 1;
+}
+const sample = '故障检测 ' + [...pageSamples.values()].join('') + ' ACC 0x23F';
+function recordedText(paged) {
+    const saved = diagnosticFont.gpuPageHeight;
+    diagnosticFont.gpuPageHeight = paged ? saved : 0;
+    try {
+        const recording = new Recorder(900, 180);
+        ['left', 'center', 'right'].forEach((align, row) => {
+            recording.text(sample, [15, 450, 880][row], 45 + row * 55, 28, '#ffffff',
+                { literal: true, align, spacing: row });
+        });
+        return recording;
+    } finally {
+        diagnosticFont.gpuPageHeight = saved;
+    }
+}
+const pagedText = recordedText(true);
+assert(pagedText.atlases.size > 1, 'A text run must support more than one GPU page');
+for (const id of pagedText.atlases) assert(atlasById(id).atlasH <= 512);
+const pagedPixels = new Canvas(900, 180), originalPixels = new Canvas(900, 180);
+play(pagedText.words(), pagedPixels);
+play(recordedText(false).words(), originalPixels);
+assert.deepStrictEqual(Buffer.from(pagedPixels.d), Buffer.from(originalPixels.d),
+    'GPU paging must preserve glyph pixels, spacing and alignment');
 let ids=0;
 for(const [src,dst] of Object.entries(translations)) {
     for(const hex of src.match(/0x[0-9A-Fa-f]+/g)||[]) { assert(dst.includes(hex),'Hex ID lost: '+src); ids++; }

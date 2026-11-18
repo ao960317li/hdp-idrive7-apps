@@ -18,6 +18,7 @@ function family(name) {
         fam = j.sizes.map((s) => ({
             size: s.size, ascent: s.ascent, descent: s.descent, atlasW: s.atlasW, atlasH: s.atlasH,
             glyphs: s.glyphs, _alpha: s.alpha, alpha: null, family: name, cacheKey: j.cacheKey || '',
+            gpuPageHeight: j.gpuPageHeight,
         }));
     } catch (e) { fam = null; }
     families[name] = fam;
@@ -42,10 +43,42 @@ function get(name, size, text) {
 /** Whether a family's atlas is there (get() falls back to 'label' for one that isn't). */
 function has(name) { return !!family(name); }
 
+/** A glyph's GPU page. The source font stays whole for measuring and software drawing. */
+function gpuPage(f, glyph) {
+    const height = f.gpuPageHeight;
+    if (!Number.isInteger(height) || height <= 0 || f.atlasH <= height) return f;
+    if (!f.gpuPages) {
+        // A cut may pass between glyph rows, never through a glyph's pixels.
+        const cuts = new Array(f.atlasH + 1).fill(true);
+        Object.keys(f.glyphs).forEach((key) => {
+            const g = f.glyphs[key];
+            if (g[2]) for (let y = g[1] + 1; y < g[1] + g[3]; y++) cuts[y] = false;
+        });
+        f.gpuPages = [];
+        let top = 0;
+        while (top < f.atlasH) {
+            let bottom = Math.min(top + height, f.atlasH);
+            while (bottom > top && !cuts[bottom]) bottom--;
+            // An unusually tall glyph needs a taller page to keep it intact.
+            if (bottom === top) {
+                bottom = Math.min(top + height, f.atlasH);
+                while (bottom < f.atlasH && !cuts[bottom]) bottom++;
+            }
+            f.gpuPages.push({
+                size: f.size, family: f.family, atlasW: f.atlasW, atlasH: bottom - top,
+                alpha: f.alpha.slice(top * f.atlasW, bottom * f.atlasW), sourceY: top,
+                cacheKey: f.cacheKey + '/gpu-page-v1/' + top + '-' + bottom,
+            });
+            top = bottom;
+        }
+    }
+    return f.gpuPages.find((page) => glyph[1] >= page.sourceY && glyph[1] + glyph[3] <= page.sourceY + page.atlasH);
+}
+
 function measure(f, s) {
     let w = 0;
     for (const ch of s) { const g = f.glyphs[ch.codePointAt(0)] || f.glyphs[63]; if (g) w += g[6]; }
     return w;
 }
 
-module.exports = { get, has, measure };
+module.exports = { get, has, gpuPage, measure };
