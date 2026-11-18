@@ -75,12 +75,12 @@ for(const text of Object.values(translations)) for(const ch of text) {
 // A renderer used by other apps can have enough total space but no shelf tall
 // enough for the complete diagnostic atlas. Its GPU pages must fit those gaps.
 const diagnosticFont = fonts.get('label', 32, '故障检测');
-assert.strictEqual(diagnosticFont.gpuPageHeight, 512);
+assert.strictEqual(diagnosticFont.gpuPageHeight, 256);
 const pageSamples = new Map();
 for (const [code, glyph] of Object.entries(diagnosticFont.glyphs)) {
     if (!glyph[2] || !glyph[3]) continue;
     const page = fonts.gpuPage(diagnosticFont, glyph);
-    assert(page && page.atlasH <= 512, 'A whole diagnostic glyph must fit its GPU page');
+    assert(page && page.atlasH <= 256, 'A whole diagnostic glyph must fit its GPU page');
     assert(glyph[1] >= page.sourceY && glyph[1] + glyph[3] <= page.sourceY + page.atlasH);
     assert(page.alpha.equals(diagnosticFont.alpha.slice(
         page.sourceY * page.atlasW, (page.sourceY + page.atlasH) * page.atlasW)));
@@ -88,11 +88,15 @@ for (const [code, glyph] of Object.entries(diagnosticFont.glyphs)) {
 }
 const shelves = [2919, 3106]; // Captured after opening thirteen previously shipped apps.
 assert(Math.min(...shelves) + diagnosticFont.atlasH > 4096, 'The old one-piece upload must reproduce the failure');
-for (const page of pageSamples.keys()) {
-    const column = shelves[0] <= shelves[1] ? 0 : 1;
-    assert(shelves[column] + page.atlasH <= 4096, 'Every diagnostic page must fit the retained GPU atlas');
-    shelves[column] += page.atlasH + 1;
+function checkUploadOrders(remaining, occupied) {
+    remaining.forEach((page, index) => {
+        const next = occupied.slice(), column = next[0] <= next[1] ? 0 : 1;
+        assert(next[column] + page.atlasH <= 4096, 'Diagnostic pages must fit regardless of text/upload order');
+        next[column] += page.atlasH + 1;
+        checkUploadOrders(remaining.filter((_, other) => other !== index), next);
+    });
 }
+checkUploadOrders([...pageSamples.keys()], shelves);
 const sample = '故障检测 ' + [...pageSamples.values()].join('') + ' ACC 0x23F';
 function recordedText(paged) {
     const saved = diagnosticFont.gpuPageHeight;
@@ -110,7 +114,7 @@ function recordedText(paged) {
 }
 const pagedText = recordedText(true);
 assert(pagedText.atlases.size > 1, 'A text run must support more than one GPU page');
-for (const id of pagedText.atlases) assert(atlasById(id).atlasH <= 512);
+for (const id of pagedText.atlases) assert(atlasById(id).atlasH <= 256);
 const pagedPixels = new Canvas(900, 180), originalPixels = new Canvas(900, 180);
 play(pagedText.words(), pagedPixels);
 play(recordedText(false).words(), originalPixels);

@@ -701,7 +701,7 @@ def build(app_id, language='en', preview_only=False, manifest_version=False, sof
             with open(os.path.join(KIT, 'localization', 'fonts', 'diagnostic-zh-CN.json'), encoding='utf-8') as file:
                 diagnostic_font = json.load(file)
             # Small GPU uploads fit between atlases retained from other apps.
-            diagnostic_font['gpuPageHeight'] = 512
+            diagnostic_font['gpuPageHeight'] = 256
             with open(os.path.join(src, 'javascript', 'kit', 'fonts', 'cjk.json'), 'w', encoding='utf-8', newline='\n') as file:
                 json.dump(diagnostic_font, file, ensure_ascii=False, separators=(',', ':'))
     if credit(language):
